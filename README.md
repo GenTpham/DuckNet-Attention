@@ -75,7 +75,7 @@ Code huấn luyện chính được chứa trong Jupyter notebook `train-ducknet
 - **Các biến thể mô hình**: Cả DuckNet thường và DuckNet-Attention
 - **Cấu hình huấn luyện**: 
   - Optimizer: AdamW
-  - Loss Function: Kết hợp Dice + BCE Loss
+  - Loss Function: Focal Tversky Loss (α=0.7, β=0.3, γ=0.75)
   - Learning Rate Scheduling
   - Early Stopping với model checkpointing
 
@@ -101,6 +101,39 @@ Input → SeparableConv2d → BatchNorm → ReLU →
 - **Channel Attention**: Tập trung vào các kênh đặc trưng quan trọng
 - **Spatial Attention**: Nhấn mạnh các vị trí không gian liên quan
 
+## 🎯 Hàm Loss: Focal Tversky Loss
+
+### Công thức toán học:
+```
+Tversky Index = TP / (TP + α·FP + β·FN + smooth)
+Focal Tversky Loss = (1 - Tversky Index)^γ
+```
+
+### Thông số sử dụng:
+- **α = 0.7**: Trọng số cho False Positive (FP)
+- **β = 0.3**: Trọng số cho False Negative (FN)
+- **γ = 0.75**: Tham số focal cho hard examples
+- **smooth = 1e-6**: Tránh chia cho 0
+
+### Ưu điểm và công dụng:
+
+1. **Xử lý dữ liệu mất cân bằng**: 
+   - α > β: Ưu tiên recall hơn precision
+   - Quan trọng trong y tế để không bỏ sót polyp
+
+2. **Tập trung vào trường hợp khó**: 
+   - Tham số γ giúp model chú ý đến các pixel khó phân loại
+   - Cải thiện performance trên boundary và small objects
+
+3. **Phù hợp medical segmentation**:
+   - Cân bằng giữa sensitivity và specificity
+   - Xử lý tốt các vùng polyp nhỏ và có biên không rõ ràng
+
+4. **So sánh với loss khác**:
+   - Tốt hơn Dice Loss với dữ liệu imbalanced
+   - Hiệu quả hơn BCE cho segmentation tasks
+   - Kết hợp ưu điểm của Tversky và Focal Loss
+
 ## 📈 Trực quan hóa kết quả
 
 Notebook bao gồm trực quan hóa toàn diện:
@@ -114,9 +147,10 @@ Notebook bao gồm trực quan hóa toàn diện:
 
 - **Hệ số Dice**: Đo lường độ chồng lấp giữa dự đoán và ground truth
 - **IoU (Intersection over Union)**: Chỉ số Jaccard cho chất lượng phân đoạn
+- **Tversky Index**: Generalization của Dice với control α,β cho FP/FN
 - **Độ chính xác Pixel**: Độ chính xác phân loại tổng thể theo pixel
-- **Precision**: Tỷ lệ true positive
-- **Recall**: Độ đo sensitivity
+- **Precision**: Tỷ lệ true positive (TP/(TP+FP))
+- **Recall (Sensitivity)**: Tỷ lệ recall (TP/(TP+FN))
 
 ## 📝 Trích dẫn
 
